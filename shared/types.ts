@@ -279,3 +279,47 @@ export interface FeasibilityResult {
   headline: string;
   alternatives: Alternative[];
 }
+
+// ───────────────────────── Plan-from-image import ─────────────────────────
+
+/** What the AI reads off a drawing. Coordinates are normalised to the image: x right, y down, both 0..1. */
+export interface PlanExtraction {
+  name?: string | null;
+  units: "m" | "mm" | "cm" | "ft" | "unknown";
+  ceilingHeightM?: number | null;
+  /** Corners of the building's floor outline, in order around it. */
+  vertices: [number, number][];
+  /** Printed dimensions for edges (edge i runs from vertex i to vertex i+1). */
+  edgeDimensions: { edge: number; text: string; meters: number | null }[];
+  /** Each opening as its two end points on the drawing (normalised), where it cuts through an outer wall. */
+  openings: { type: "door" | "window"; x0: number; y0: number; x1: number; y1: number; widthMeters?: number | null; isEntry?: boolean }[];
+  obstacles: { type: "core" | "column" | "shaft" | "stair"; label?: string | null; polygon: [number, number][] }[];
+  warnings: string[];
+}
+
+export interface ImportEdge {
+  index: number;
+  /** Dimension text as printed on the drawing, if there was one. */
+  printed: string | null;
+  printedMeters: number | null;
+  /** Length of this wall in the rebuilt plan. */
+  builtMeters: number;
+  /** printed = taken from the drawing; estimated = worked out from the drawing's scale. */
+  source: "printed" | "estimated";
+  /** A printed dimension the rebuilt wall does not match (usually a misread number). */
+  mismatch: boolean;
+}
+
+export interface PlanImportResult {
+  ok: boolean;
+  /** The drawing had no usable dimensions: ask the user for one real length. */
+  needsScale: boolean;
+  plan: FloorPlan | null;
+  validation: ValidationResult | null;
+  extraction: PlanExtraction;
+  edges: ImportEdge[];
+  notes: string[];
+  provider?: string;
+  model?: string;
+  latencyMs?: number;
+}

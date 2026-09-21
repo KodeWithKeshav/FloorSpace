@@ -13,6 +13,9 @@ import { loadCatalog } from "./catalog";
 import { checkFeasibility, generateCached } from "./pipeline/feasibility";
 import { exportGodotProject } from "./godot/exportProject";
 import { phoneRouter } from "./phone";
+import { anyVisionProvider } from "./llm";
+import { buildFromExtraction, importPlanFromImage } from "./planimport";
+import { parseExtraction } from "./planimport/extraction";
 import { findGodot, launchGodot, zipDirectory } from "./godot/launch";
 import type { FloorPlan, Requirements } from "../../shared/types";
 
@@ -96,6 +99,27 @@ app.post("/api/generate", (req, res) => {
 });
 
 app.use(phoneRouter());
+
+// ── Plan from an image (AI reads it; code rebuilds it from the printed dimensions) ──
+
+app.post("/api/floorplans/from-image", async (req, res) => {
+  const b = req.body as { image?: string; width?: number; height?: number; ceilingHeightM?: number; longestWallMeters?: number } | undefined;
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(b?.image ?? "");
+  if (!m || !b?.width || !b?.height) return void res.status(400).json({ error: "Send { image: data URL (png/jpeg/webp), width, height }" });
+  if (!anyVisionProvider()) return void res.status(503).json({ error: "AI is not set up. Add GEMINI_API_KEY (or OPENROUTER_API_KEY / GROQ_API_KEY) to .env and restart." });
+  try {
+    res.json(await importPlanFromImage({ base64: m[2], mimeType: m[1], width: b.width, height: b.height }, { ceilingHeightM: b.ceilingHeightM, longestWallMeters: b.longestWallMeters }));
+  } catch (e) {
+    res.status(502).json({ error: (e as Error).message });
+  }
+});
+
+/** Re-run the rebuild with corrected numbers. No AI call, so it is instant and free. */
+app.post("/api/floorplans/from-extraction", (req, res) => {
+  const b = req.body as { extraction?: unknown; width?: number; height?: number; ceilingHeightM?: number; longestWallMeters?: number } | undefined;
+  if (!b?.extraction || !b.width || !b.height) return void res.status(400).json({ error: "Send { extraction, width, height }" });
+  res.json(buildFromExtraction(parseExtraction(b.extraction), { width: b.width, height: b.height, ceilingHeightM: b.ceilingHeightM, longestWallMeters: b.longestWallMeters }));
+});
 
 // ── Godot export ───────────────────────────────────────────────────────────────
 

@@ -43,6 +43,10 @@ export interface UnitParams {
   capacity?: number; // meeting
   seats?: number; // cafeteria
   style?: string;
+  /** Cafeteria: number of table columns (default depends on the seat count). */
+  cols?: number;
+  /** Cafeteria: tighter spacing, used when the roomy version does not fit anywhere. */
+  compact?: boolean;
 }
 
 export const zoneTypeOf = (k: UnitKind): ZoneType => k;
@@ -78,21 +82,23 @@ export function unitSize(kind: UnitKind, p: UnitParams, cat: Cat): Sizes {
     case "storage":
       return { W: 2.5, D: 1.8 };
     case "pantry":
-      return { W: 3.8, D: 2.2 };
+      return { W: 4.4, D: 2.4 };
     case "lounge":
       return { W: 4.8, D: 3.4 };
     case "reception":
       return { W: 4.6, D: 4.0 };
     case "cafeteria": {
-      const c = cafeGrid(p.seats ?? 20);
-      return { W: Math.max(c.cols * 2.0, 6.6), D: c.rows * 2.0 + 2.2 };
+      const c = cafeGrid(p.seats ?? 20, p.cols);
+      // Roomy: 2.4 m per 4-seat table both ways plus a 2.6 m service zone, wide enough for two counters and two machines.
+      if (p.compact) return { W: Math.max(c.cols * 2.0, 6.6), D: c.rows * 2.0 + 2.2 };
+      return { W: Math.max(c.cols * 2.4, 8.0), D: c.rows * 2.4 + 2.6 };
     }
   }
 }
 
-function cafeGrid(seats: number) {
+export function cafeGrid(seats: number, colsOverride?: number) {
   const clusters = Math.max(1, Math.ceil(seats / 4));
-  const cols = Math.max(2, Math.ceil(Math.sqrt(clusters * 1.5)));
+  const cols = Math.max(2, colsOverride ?? Math.ceil(Math.sqrt(clusters * 1.5)));
   return { clusters, cols, rows: Math.ceil(clusters / cols) };
 }
 
@@ -152,9 +158,8 @@ export function buildUnit(kind: UnitKind, p: UnitParams, fr: Frame, cat: Cat, on
       add("cabinet", 0.75, back + 0.4, 0);
       break;
     case "pantry":
-      add("counter-cafe", -W / 2 + 1.3, back + 0.5, 0);
+      add("counter-cafe", -W / 2 + 1.5, back + 0.55, 0);
       add("vending-2", W / 2 - 0.7, back + 0.4, 0);
-      add("water-cooler", W / 2 - 1.5, back + 0.2, 0);
       add("plant-agave", -W / 2 + 0.45, front - 0.45, 0);
       break;
     case "lounge": {
@@ -176,20 +181,23 @@ export function buildUnit(kind: UnitKind, p: UnitParams, fr: Frame, cat: Cat, on
       break;
     }
     case "cafeteria": {
-      const { clusters, cols } = cafeGrid(p.seats ?? 20);
+      const { clusters, cols } = cafeGrid(p.seats ?? 20, p.cols);
       const want = p.seats ?? 20;
-      // Service counters and vending machines along the back wall.
-      add("counter-cafe", -W / 2 + 1.4, back + 0.5, 0);
-      add("counter-cafe", -W / 2 + 3.8, back + 0.5, 0);
-      add("vending-1", W / 2 - 0.5, back + 0.4, 0);
-      if (W >= 7.4) add("vending-2", W / 2 - 1.6, back + 0.4, 0);
+      const pitch = p.compact ? 2.0 : 2.4, service = p.compact ? 2.2 : 2.6, chairOff = p.compact ? 0.68 : 0.78;
+      // Service counters and vending machines along the back wall, a plant at each end of the seating.
+      add("counter-cafe", -W / 2 + 1.5, back + 0.55, 0);
+      if (!p.compact) add("counter-cafe", -W / 2 + 4.3, back + 0.55, 0);
+      add("vending-2", W / 2 - 0.75, back + 0.4, 0);
+      add("vending-1", W / 2 - 1.95, back + 0.4, 0);
+      add("plant-fiddle", -W / 2 + 0.5, front - 0.5, 0);
+      add("plant-fiddle", W / 2 - 0.5, front - 0.5, 0);
       let placed = 0;
       for (let k = 0; k < clusters && placed < want; k++) {
         const col = k % cols, row = Math.floor(k / cols);
         const x = -W / 2 + (W / cols) * (col + 0.5);
-        const z = back + 2.2 + 2.0 * (row + 0.5);
+        const z = back + service + pitch * (row + 0.5);
         add("table-round", x, z, 0);
-        const spots: [number, number, number][] = [[0.62, 0, -90], [-0.62, 0, 90], [0, 0.62, 180], [0, -0.62, 0]];
+        const spots: [number, number, number][] = [[chairOff, 0, -90], [-chairOff, 0, 90], [0, chairOff, 180], [0, -chairOff, 0]];
         for (const [ox, oz, rot] of spots) {
           if (placed >= want) break;
           add("chair-task-grey", x + ox, z + oz, rot);

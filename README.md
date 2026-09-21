@@ -78,3 +78,17 @@ Scan the QR code (phone on the same Wi-Fi), accept the browser's certificate war
 - **Look around with the gyro** (any phone, including iPhone): turn the phone to look, walk with the stick.
 
 **Send latest edits to the phone** republishes the layout after you change it in Edit mode. The phone page lives in `client/src/phone/`; nothing in the existing walkthrough, editor or exports is changed.
+
+## Plan from an image (AI)
+
+On the floor plan screen, **From a plan image** turns a dimensioned drawing (PNG, JPG or PDF) into a floor plan.
+
+1. Put a key in `.env` (copy `.env.example`): `GEMINI_API_KEY`, `OPENROUTER_API_KEY` or `GROQ_API_KEY`. Providers are tried in that order; the key never leaves the server.
+2. Upload a plan, or try the sample blueprints, then **Read the plan**.
+3. The AI reads the structure and the printed dimensions. Code then does the precise work:
+   - rebuilds the outline from the printed dimensions (walls forced straight, printed numbers win over pixels),
+   - snaps the outline onto the real wall lines in the image,
+   - finds doors and windows by scanning the wall strokes for gaps, columns as solid squares, cores by their borders.
+4. **Check what the AI read** shows the detection drawn over your drawing next to the rebuilt plan. Fix a wall length, change a door/window, pick the entrance, or delete a false opening, then **Use this plan**.
+
+Accuracy on the two sample blueprints (`npm test` covers this without any AI): walls exact, all doors and windows within 0.1 m, columns exact, cores within 0.3 m. The pixel steps need a clean drawing with thick wall lines; on photos, hand sketches or slanted walls they switch themselves off and say so, leaving the AI's reading for you to correct. Regenerate the samples with `npx tsx scripts/make-blueprints.ts`.

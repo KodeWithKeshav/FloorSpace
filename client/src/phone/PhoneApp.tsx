@@ -35,7 +35,13 @@ export default function PhoneApp() {
   const ctl = useRef<PhoneControl>({
     mode: "idle", joy: { x: 0, y: 0 }, goto: null, passthrough: true, yOffset: 0,
     orientation: { alpha: 0, beta: 0, gamma: 0, screen: 0, live: false }, dragYaw: 0, dragPitch: 0,
+    readout: { x: 0, y: 0, h: 0, tracking: false },
   });
+  const [pos, setPos] = useState({ x: 0, y: 0, h: 0, tracking: false });
+  useEffect(() => {
+    const t = setInterval(() => setPos({ ...ctl.current.readout }), 250);
+    return () => clearInterval(t);
+  }, []);
   const joy = useMemo(() => ({ get current() { return ctl.current.joy; }, set current(v) { ctl.current.joy = v; } }), []);
 
   useEffect(() => {
@@ -181,6 +187,13 @@ export default function PhoneApp() {
             {scene.teleports.map((t, i) => <option key={t.id} value={i} className="text-black">{t.label}</option>)}
           </select>
         </div>
+        {mode === "ar" && (
+          <div className="absolute inset-x-0 top-16 flex justify-center">
+            <div className="rounded-full bg-black/55 px-3 py-1 font-mono text-[12px] text-white backdrop-blur">
+              {pos.tracking ? `x ${pos.x.toFixed(1)}  y ${pos.y.toFixed(1)}  ·  eye ${pos.h.toFixed(2)} m` : "waiting for tracking…"}
+            </div>
+          </div>
+        )}
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
           <Joystick value={joy} label="Walk" />
           <div className="pointer-events-auto flex flex-col items-end gap-2">

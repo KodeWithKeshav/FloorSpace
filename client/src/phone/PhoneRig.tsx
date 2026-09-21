@@ -15,8 +15,10 @@ export interface PhoneControl {
   goto: Teleport | null;
   /** See the real world behind the office (AR camera) instead of an opaque sky. */
   passthrough: boolean;
-  /** Reference space is 'local' (no floor known): lower the world so eyes sit at head height. */
+  /** Unused legacy field: the height is now set from where the phone is held when you place yourself. */
   yOffset: number;
+  /** Live readout for the HUD: where you are in the office (plan metres) and how high the phone is above its floor. */
+  readout: { x: number; y: number; h: number; tracking: boolean };
   orientation: { alpha: number; beta: number; gamma: number; screen: number; live: boolean };
   /** Extra look from dragging, radians. */
   dragYaw: number;
@@ -39,6 +41,8 @@ function deviceQuaternion(q: THREE.Quaternion, o: PhoneControl["orientation"]) {
 }
 
 const EYE = 1.6;
+/** Eye height we put the phone at in the office when placing you, whatever height it is really held at. */
+const AR_EYE = 1.55;
 
 /**
  * Wraps the office and turns the phone's motion into movement through it.
@@ -54,7 +58,7 @@ const SKY = new THREE.Color("#cfe2f3");
 export default function PhoneRig({ scene, ctl, mode, children }: { scene: SceneDescription; ctl: MutableRefObject<PhoneControl>; mode: PhoneMode; children: ReactNode }) {
   const { camera, gl, scene: three } = useThree();
   const world = useRef<THREE.Group>(null);
-  const xr = useRef({ alpha: 0, px: 0, pz: 0, placed: false });
+  const xr = useRef({ alpha: 0, px: 0, py: 0, pz: 0, placed: false });
   const gy = useRef({ x: scene.spawn.x, y: scene.spawn.y, yawOff: 0, calibrated: false, target: yawFromLook(scene.spawn.lookDeg) });
   const ground = useRef<THREE.Object3D | null>(null);
   const tick = useRef(0);
@@ -84,6 +88,9 @@ export default function PhoneRig({ scene, ctl, mode, children }: { scene: SceneD
     }
     if (ground.current) ground.current.visible = !wantClear;
 
+    // AR photos come out washed out under the default filmic tone mapping on phone displays: darken a little.
+    gl.toneMappingExposure = c.mode === "ar" ? 0.72 : 1;
+
     if (c.mode === "ar" && gl.xr.isPresenting) {
       const s = xr.current;
       const place = (t: Teleport) => {
@@ -98,6 +105,9 @@ export default function PhoneRig({ scene, ctl, mode, children }: { scene: SceneD
         s.alpha = alpha;
         s.px = tmp.current.x - (cs * tx + sn * tz);
         s.pz = tmp.current.z - (-sn * tx + cs * tz);
+        // Put the office floor exactly AR_EYE below wherever the phone is right now. The tracker's own idea of the
+        // floor can be wrong (a bed, a table, no floor found yet), and that would leave you below the virtual floor.
+        s.py = tmp.current.y - AR_EYE;
         s.placed = true;
       };
       if (c.goto) {
@@ -119,8 +129,13 @@ export default function PhoneRig({ scene, ctl, mode, children }: { scene: SceneD
       }
       if (world.current) {
         world.current.rotation.set(0, s.alpha, 0);
-        world.current.position.set(s.px, c.yOffset, s.pz);
+        world.current.position.set(s.px, s.py, s.pz);
       }
+      // Where you are in the office right now (inverse of the placement above).
+      camera.getWorldPosition(tmp.current);
+      const dx = tmp.current.x - s.px, dz = tmp.current.z - s.pz;
+      const cs2 = Math.cos(s.alpha), sn2 = Math.sin(s.alpha);
+      c.readout = { x: cs2 * dx - sn2 * dz, y: -(sn2 * dx + cs2 * dz), h: tmp.current.y - s.py, tracking: true };
       return;
     }
 

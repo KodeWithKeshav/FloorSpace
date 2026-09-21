@@ -127,6 +127,50 @@ describe("layout generation", () => {
     });
   }
 
+  it("puts the reception first: nearer the door than any open-plan desk, and never behind the desks", () => {
+    for (const id of ["small-office", "l-shaped-floor", "large-open-floor", "tight-floor"]) {
+      const plan = load(id);
+      const l = generateLayout(plan, brief(id), catalog);
+      const door = plan.openings.find((o) => o.type === "door" && o.isEntry)!;
+      const e: [number, number] = [(door.wall[0][0] + door.wall[1][0]) / 2, (door.wall[0][1] + door.wall[1][1]) / 2];
+      const rec = l.zones.find((z) => z.type === "reception");
+      assert.ok(rec, `${id}: no reception`);
+      const c = rec!.polygon.reduce((a, p) => [a[0] + p[0] / 4, a[1] + p[1] / 4], [0, 0]);
+      const dRec = Math.hypot(c[0] - e[0], c[1] - e[1]);
+      assert.ok(dRec < 8, `${id}: reception is ${dRec.toFixed(1)} m from the entry`);
+      const desks = l.placements.filter((p) => p.itemId === "desk-workstation" && l.zones.find((z) => z.id === p.zoneId)?.label === "Open plan");
+      for (const d of desks) assert.ok(Math.hypot(d.position[0] - e[0], d.position[1] - e[1]) > dRec, `${id}: a desk is nearer the door than the reception`);
+    }
+  });
+
+  it("gives every open-plan desk a chair directly in front of it, facing it", () => {
+    for (const id of ["small-office", "l-shaped-floor", "large-open-floor"]) {
+      const l = generateLayout(load(id), brief(id), catalog);
+      const open = new Set(l.zones.filter((z) => z.label === "Open plan").map((z) => z.id));
+      for (const d of l.placements.filter((p) => p.itemId === "desk-workstation" && open.has(p.zoneId))) {
+        const chair = l.placements.filter((p) => p.zoneId === d.zoneId && byId.get(p.itemId)!.category === "chair").sort((a, b) => Math.hypot(a.position[0] - d.position[0], a.position[1] - d.position[1]) - Math.hypot(b.position[0] - d.position[0], b.position[1] - d.position[1]))[0];
+        const t = (d.rotationDeg * Math.PI) / 180;
+        const toChair = [chair.position[0] - d.position[0], chair.position[1] - d.position[1]];
+        assert.ok(Math.cos(t) * toChair[0] + Math.sin(t) * toChair[1] > 0.3, `${id}: chair is behind its desk`);
+        assert.ok(Math.abs(((chair.rotationDeg - d.rotationDeg + 360) % 360) - 180) < 1, `${id}: chair does not face its desk`);
+      }
+    }
+  });
+
+  it("builds a cafeteria with room to breathe (at least 1.6 m² per seat) wherever it fits", () => {
+    for (const id of ["l-shaped-floor", "large-open-floor"]) {
+      const l = generateLayout(load(id), brief(id), catalog);
+      const cafe = l.zones.find((z) => z.type === "cafeteria");
+      assert.ok(cafe, `${id}: no cafeteria`);
+      assert.ok(area(cafe!.polygon) / cafe!.seats >= 1.6, `${id}: ${area(cafe!.polygon)} m² for ${cafe!.seats} seats`);
+    }
+  });
+
+  it("uses the corrected desk orientation: the raw model faces -Z so the catalogue turns it half a circle", () => {
+    assert.equal(byId.get("desk-workstation")!.frontYawDeg, 180);
+    assert.ok(byId.get("counter-cafe")!.height >= 1.0, "a serving counter is about a metre high");
+  });
+
   it("places all 100 seats on the hero floor", () => {
     const l = generateLayout(load("large-open-floor"), brief("large-open-floor"), catalog);
     assert.equal(l.metrics.seatsProvided, 100);

@@ -3,7 +3,7 @@ import type {
 } from "../../../shared/types";
 import { dist, distPointToSegment } from "../../../shared/geometry";
 import { Grid, CELL } from "./grid";
-import { buildUnit, edgeOnPolyline, isEnclosed, makeFrame, toPlan, unitSize } from "./units";
+import { buildUnit, cafeGrid, edgeOnPolyline, isEnclosed, makeFrame, toPlan, unitSize } from "./units";
 import type { Frame, UnitKind, UnitParams } from "./units";
 import { computeMetrics } from "./metrics";
 import { validateLayout } from "./validate";
@@ -34,6 +34,8 @@ interface Ctx {
   nextItem: number;
   aisle: number;
   cabinCenters: Pt[];
+  /** Desks may only sit beyond this distance from the entry: the reception (lobby) comes first. */
+  lobby: { centre: Pt; radius: number } | null;
 }
 
 const cells = (m: number) => Math.ceil(m / CELL - 1e-6);
@@ -74,6 +76,7 @@ function generateOnce(plan: FloorPlan, req: Requirements, catalog: Catalog, opts
     accessCells: [], nextZone: 1, nextItem: 1,
     aisle: attempt >= 1 ? 1.0 : plan.circulation.secondaryCorridorWidth,
     cabinCenters: [],
+    lobby: null,
   };
 
   // Every door keeps a clear approach, whatever else happens.
@@ -82,12 +85,22 @@ function generateOnce(plan: FloorPlan, req: Requirements, catalog: Catalog, opts
   carveCorridors(ctx, attempt);
 
   const wanted = expandRequests(req);
-  const order: ZoneType[] = ["reception", "meeting", "cabin", "phonebooth", "storage", "pantry", "cafeteria", "lounge"];
+  const order: ZoneType[] = ["reception", "cafeteria", "meeting", "cabin", "phonebooth", "storage", "pantry", "lounge"];
   for (const type of order) {
     for (const z of wanted.filter((w) => w.type === type)) {
       for (let i = 0; i < z.count; i++) {
         const label = z.count > 1 || wanted.filter((w) => w.type === type).length > 1 ? `${labelOf(type)} ${i + 1}` : labelOf(type);
-        const ok = placeRoom(ctx, type as UnitKind, { capacity: z.capacity, seats: z.seats, style: z.style }, z.preference, label);
+        const base = { capacity: z.capacity, seats: z.seats, style: z.style };
+        let ok = placeRoom(ctx, type as UnitKind, base, z.preference, label);
+        if (!ok && type === "cafeteria") {
+          // Try other proportions, then a tighter version, before giving up on the cafeteria.
+          const c = cafeGrid(z.seats ?? 20).cols;
+          const variants = [{ cols: c + 1 }, { cols: Math.max(2, c - 1) }, { cols: c + 2 }, { compact: true }, { compact: true, cols: c + 1 }, { compact: true, cols: c + 2 }];
+          for (const v of variants) {
+            ok = placeRoom(ctx, type as UnitKind, { ...base, ...v }, z.preference, label);
+            if (ok) break;
+          }
+        }
         if (!ok) ctx.unplaced.push(`${labelOf(type)} ${i + 1}`);
       }
     }
@@ -288,6 +301,15 @@ function placeRoom(ctx: Ctx, kind: UnitKind, params: UnitParams, pref: ZoneReque
   return false;
 }
 
+/** True when any part of a cell rectangle lies within the entrance lobby (nearer the door than the reception). */
+function inLobby(ctx: Ctx, cx0: number, cy0: number, px: number, py: number): boolean {
+  const L = ctx.lobby;
+  if (!L) return false;
+  const [x0, y0, x1, y1] = ctx.grid.rectMetres(cx0, cy0, cx0 + px, cy0 + py);
+  const nx = Math.max(x0, Math.min(L.centre[0], x1)), ny = Math.max(y0, Math.min(L.centre[1], y1));
+  return Math.hypot(nx - L.centre[0], ny - L.centre[1]) < L.radius;
+}
+
 /** Fraction of the cells just behind a rectangle (opposite its front) that are wall, structure or another room. */
 function backContact(ctx: Ctx, cx0: number, cy0: number, cx1: number, cy1: number, f: Pt): number {
   const { grid } = ctx;
@@ -371,7 +393,8 @@ function scoreRect(ctx: Ctx, cx0: number, cy0: number, cx1: number, cy1: number,
   } else if (pref === "core_adjacent") {
     score += (1 - Math.min(grid.coreDist[mi], 14) / 14) * 2.2;
   } else if (pref === "entry_adjacent") {
-    score += (1 - Math.min(grid.entryDist[mi], 12) / 12) * 3;
+    // Reception belongs at the door: this outweighs every other consideration.
+    score += (1 - Math.min(grid.entryDist[mi], 16) / 16) * (kind === "reception" ? 14 : 3);
   } else if (pref === "quiet") {
     score += Math.min(grid.entryDist[mi], 25) / 25 * 2;
   }
@@ -421,6 +444,10 @@ function commitUnit(ctx: Ctx, kind: UnitKind, params: UnitParams, label: string,
   for (let y = ap[1]; y < ap[3]; y++) for (let x = ap[0]; x < ap[2]; x++) apCells.push([x, y]);
   ctx.accessCells.push({ zoneId, cells: apCells });
   if (kind === "cabin") ctx.cabinCenters.push([(x0 + x1) / 2, (y0 + y1) / 2]);
+  if (kind === "reception" && ctx.entry) {
+    const c: Pt = [(x0 + x1) / 2, (y0 + y1) / 2];
+    ctx.lobby = { centre: ctx.entry, radius: dist(ctx.entry, c) + 0.3 };
+  }
   void size;
 }
 
@@ -468,6 +495,7 @@ function packPods(ctx: Ctx, axis: "x" | "y", order: number, perRow: number, want
       for (const cx0 of scan(grid.nx - px + 1, order & 2)) {
         if (seats >= want) break;
         if (!grid.rectFree(cx0, cy0, cx0 + px, cy0 + py)) continue;
+        if (inLobby(ctx, cx0, cy0, px, py)) continue; // reception first: no desks between the door and the reception
         grid.markSolid(cx0, cy0, cx0 + px, cy0 + py);
         const ring = ringCells(cx0, cy0, px, py);
         if (!staysConnected(ctx, ring)) {
@@ -520,6 +548,7 @@ function fillRows(ctx: Ctx, want: number, order: number, desk: { width: number; 
         for (const cx0 of scan(grid.nx - px + 1, order & 2)) {
           if (seats >= want) break;
           if (!grid.rectFree(cx0, cy0, cx0 + px, cy0 + py)) continue;
+          if (inLobby(ctx, cx0, cy0, px, py)) continue; // reception first: no desks between the door and the reception
           if (backContact(ctx, cx0, cy0, cx0 + px, cy0 + py, f) < 0.95) continue;
           grid.markSolid(cx0, cy0, cx0 + px, cy0 + py);
           const ring = ringCells(cx0, cy0, px, py);

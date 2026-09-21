@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-21T10:41:51.292Z",
+  "generatedAt": "2026-09-21T15:29:07.523Z",
   "items": [
     {
       "id": "chair-task-grey",
@@ -127,11 +127,11 @@
       },
       "elevation": 0,
       "scale": 0.5999997,
-      "frontYawDeg": 0,
+      "frontYawDeg": 180,
       "origin": [
-        -0.273,
+        0.273,
         0,
-        -3.943
+        3.943
       ],
       "raw": {
         "size": [
@@ -254,10 +254,10 @@
       "category": "cafeteria",
       "model": "/assets/models/cafe_counter.glb",
       "footprint": {
-        "width": 2.4,
-        "depth": 0.897
+        "width": 2.8,
+        "depth": 1.046
       },
-      "height": 0.885,
+      "height": 1.032,
       "seats": 0,
       "clearance": {
         "front": 0.9,
@@ -266,12 +266,12 @@
         "right": 0.05
       },
       "elevation": 0,
-      "scale": 1.2631577999999999,
+      "scale": 1.473684,
       "frontYawDeg": 0,
       "origin": [
-        0.008,
-        -0.35,
-        -0.102
+        0.009,
+        -0.409,
+        -0.119
       ],
       "raw": {
         "size": [
@@ -888,8 +888,8 @@
       "category": "cafeteria",
       "model": "",
       "footprint": {
-        "width": 0.9,
-        "depth": 0.9
+        "width": 1.1,
+        "depth": 1.1
       },
       "height": 0.75,
       "seats": 0,
@@ -909,9 +909,9 @@
       ],
       "raw": {
         "size": [
-          0.9,
+          1.1,
           0.75,
-          0.9
+          1.1
         ],
         "triangles": 0,
         "bytes": 0

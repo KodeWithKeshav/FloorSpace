@@ -64,3 +64,11 @@ export async function downloadGodotProject(plan: FloorPlan, layout: Layout): Pro
   a.click();
   URL.revokeObjectURL(url);
 }
+
+import type { PlanExtraction, PlanImportResult } from "../../../shared/types";
+
+export const readPlanImage = (body: { image: string; width: number; height: number; ceilingHeightM?: number; longestWallMeters?: number }) =>
+  post<PlanImportResult>("/api/floorplans/from-image", body);
+
+export const rebuildPlan = (body: { extraction: PlanExtraction; width: number; height: number; ceilingHeightM?: number; longestWallMeters?: number }) =>
+  post<PlanImportResult>("/api/floorplans/from-extraction", body);

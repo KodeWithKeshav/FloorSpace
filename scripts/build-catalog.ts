@@ -38,12 +38,13 @@ const ASSETS: Spec[] = [
   { id: "chair-exec-brown", file: "office_chair_3", name: "Executive Chair", category: "chair", fit: ["height", 1.2], seats: 1 },
   { id: "chair-task-blue", file: "office_chair_4", name: "Task Chair (Blue)", category: "chair", fit: ["height", 1.0], seats: 1 },
   // Workstations & tables (front = the side the user sits on)
-  { id: "desk-workstation", file: "conf_desk_1", name: "Workstation Desk", category: "workstation", fit: ["width", 1.2], seats: 1, clearFront: 0.6 },
+  // The raw model has its monitors, keyboard and user side on -Z, so it is turned half a circle to face +Z like everything else.
+  { id: "desk-workstation", file: "conf_desk_1", name: "Workstation Desk", category: "workstation", fit: ["width", 1.2], seats: 1, frontYaw: 180, clearFront: 0.6 },
   { id: "table-meeting-8", file: "conf_desk_4", name: "Conference Table (8-10)", category: "meeting", fit: ["width", 3.2] },
   { id: "table-meeting-6", file: "conf_desk_3", name: "Meeting Table (4-6)", category: "meeting", fit: ["width", 2.4], frontYaw: 90 },
   // Reception & cafeteria
   { id: "reception-desk", file: "recep_3", name: "Curved Reception Desk", category: "reception", fit: ["width", 2.6], frontYaw: 45, clearFront: 0.9 },
-  { id: "counter-cafe", file: "cafe_counter", name: "Cafe Counter", category: "cafeteria", fit: ["width", 2.4], clearFront: 0.9 },
+  { id: "counter-cafe", file: "cafe_counter", name: "Cafe Counter", category: "cafeteria", fit: ["width", 2.8], clearFront: 0.9 },
   { id: "vending-1", file: "vending_machine_1", name: "Vending Machine", category: "cafeteria", fit: ["height", 1.85], clearFront: 0.9 },
   { id: "vending-2", file: "vending_machine_2", name: "Snack Machine", category: "cafeteria", fit: ["height", 1.85], clearFront: 0.9 },
   // Lounge seating
@@ -121,7 +122,7 @@ function build(): Catalog {
 
 /** Simple shapes the layout engine uses that have no GLB. */
 const PROCEDURAL: CatalogItem[] = [
-  proc("table-round", "Round Cafe Table", "cafeteria", 0.9, 0.9, 0.75, "cylinder", "#d9d2c3"),
+  proc("table-round", "Round Cafe Table", "cafeteria", 1.1, 1.1, 0.75, "cylinder", "#d9d2c3"),
   proc("table-coffee", "Coffee Table", "lounge", 1.0, 0.6, 0.4, "box", "#8a6a4d"),
 ];
 

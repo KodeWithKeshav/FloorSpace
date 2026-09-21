@@ -10,6 +10,7 @@ import type { HoverTarget, PreviewOptions } from "../components/PlanPreview";
 import PlanDetails from "../components/PlanDetails";
 import SampleGallery from "../components/SampleGallery";
 import UploadPanel from "../components/UploadPanel";
+import ImagePlanPanel from "../components/ImagePlanPanel";
 import ValidationPanel from "../components/ValidationPanel";
 
 type Source = { kind: "sample"; id: string } | { kind: "custom"; name: string };
@@ -150,6 +151,7 @@ export default function PlanScreen({ visible, onPlan, onContinue }: Props) {
           <div>
             <SectionLabel>Your own plan</SectionLabel>
             <UploadPanel onText={handleText} active={source?.kind === "custom"} busy={busy} />
+            <div className="mt-3"><ImagePlanPanel onUse={handleText} /></div>
           </div>
         </aside>
 
