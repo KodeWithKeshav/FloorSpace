@@ -10,6 +10,8 @@ Start with `npm run dev` and open http://localhost:5173.
 
 **4. Walk it (90 s).** **Walk through it in 3D.** Click, then WASD. Use **Go to** to jump to the meeting room, the cabin and reception. Try to walk through a desk or wall: you can't. Toggle **Bird's-eye view** and back. The minimap follows you.
 
+**4b. Reorganise from inside (60 s).** Switch the mode toggle from *Walk* to *Edit*. Click a chair, drag it, press `R` to rotate, `[`/`]` to resize. Open **Add furniture** and drop in a plant. Drag something through a wall and watch it turn red. `Ctrl+Z` undoes. Go back to the layout screen: it now says *Edited in 3D* and the plan shows your changes.
+
 **5. In Godot (30 s).** Back on the layout screen, **Open in Godot on this computer**. Press F5 in Godot and walk the same building in first person.
 
 **6. Finish on the refusal (60 s).** Go back to the plan, choose **Compact Studio Floor**, continue. The same 100-seat brief is red: *Does not fit*, with the honest maximum and concrete options. Click **Keep only the essentials** and watch it turn amber/green, then generate the best fit. The system refusing intelligently is the strongest part of the demo.

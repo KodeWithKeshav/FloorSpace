@@ -41,10 +41,12 @@ interface Props {
   input: MutableRefObject<WalkInput>;
   topView: boolean;
   onLockChange: (locked: boolean) => void;
+  /** Edit mode: no pointer lock. Hold the right mouse button to look; the left button belongs to the editor. */
+  editing?: boolean;
 }
 
 /** First-person walker with pointer-lock look, WASD / arrow keys, sprint, wall and furniture collision. */
-export default function Player({ scene, state, input, topView, onLockChange }: Props) {
+export default function Player({ scene, state, input, topView, onLockChange, editing = false }: Props) {
   const { camera, gl } = useThree();
   const box = bbox(scene.boundary);
   const span = Math.max(box.width, box.height);
@@ -65,12 +67,16 @@ export default function Player({ scene, state, input, topView, onLockChange }: P
     };
     const onMove = (e: MouseEvent) => {
       if (document.pointerLockElement === el) look(e.movementX, e.movementY, 0.0022);
-      else if (drag.current && !topView) {
+      else if (drag.current && (!topView || editing) && (!editing || e.buttons & 2)) {
         look(e.clientX - drag.current.x, e.clientY - drag.current.y, 0.004);
         drag.current = { x: e.clientX, y: e.clientY };
       }
     };
     const onDown = (e: MouseEvent) => {
+      if (editing) {
+        if (e.button === 2 && !topView) drag.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
       if (topView) return;
       if (e.button === 0) {
         try {
@@ -89,6 +95,10 @@ export default function Player({ scene, state, input, topView, onLockChange }: P
     };
     const key = (down: boolean) => (e: KeyboardEvent) => {
       const i = input.current;
+      const t = e.target as HTMLElement | null;
+      if (down && t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
+      if (e.metaKey || e.ctrlKey) return;
+      if (editing && (e.code === "KeyQ" || e.code === "KeyE")) return;
       switch (e.code) {
         case "KeyW": case "ArrowUp": i.forward = down; break;
         case "KeyS": case "ArrowDown": i.back = down; break;
@@ -102,6 +112,9 @@ export default function Player({ scene, state, input, topView, onLockChange }: P
       if (e.code.startsWith("Arrow")) e.preventDefault();
     };
     const kd = key(true), ku = key(false);
+    const noMenu = (e: Event) => editing && e.preventDefault();
+    if (editing && document.pointerLockElement === el) document.exitPointerLock();
+    el.addEventListener("contextmenu", noMenu);
     el.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("mousemove", onMove);
@@ -109,6 +122,7 @@ export default function Player({ scene, state, input, topView, onLockChange }: P
     window.addEventListener("keydown", kd);
     window.addEventListener("keyup", ku);
     return () => {
+      el.removeEventListener("contextmenu", noMenu);
       el.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("mousemove", onMove);
@@ -117,7 +131,7 @@ export default function Player({ scene, state, input, topView, onLockChange }: P
       window.removeEventListener("keyup", ku);
       if (document.pointerLockElement === el) document.exitPointerLock();
     };
-  }, [gl, state, input, topView, onLockChange]);
+  }, [gl, state, input, topView, onLockChange, editing]);
 
   // Bird's-eye camera placement when switching views.
   useEffect(() => {
@@ -161,7 +175,16 @@ export default function Player({ scene, state, input, topView, onLockChange }: P
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
   });
 
-  return topView ? <OrbitControls ref={controls} makeDefault maxPolarAngle={Math.PI / 2 - 0.05} enableDamping /> : null;
+  return topView ? (
+    <OrbitControls
+      ref={controls}
+      makeDefault
+      maxPolarAngle={Math.PI / 2 - 0.05}
+      enableDamping
+      // While editing, the left button moves furniture: right button pans, middle rotates, wheel zooms.
+      mouseButtons={editing ? { LEFT: -1 as unknown as THREE.MOUSE, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN } : undefined}
+    />
+  ) : null;
 }
 
 export { THREE };

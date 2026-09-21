@@ -173,17 +173,17 @@ tonemap_mode = 2`);
         sub.push(`[sub_resource type="CylinderMesh" id="cy_${rid(c.id)}"]\ntop_radius = ${f(c.footprint.width / 2)}\nbottom_radius = ${f(c.footprint.width / 2)}\nheight = ${f(c.height)}`);
         // declared once per catalog item below; guard duplicates
       }
-      nodes.push(`[node name="${name}" type="MeshInstance3D" parent="Furniture"]\ntransform = ${T(rotY(it.yawDeg), [it.x, it.elevation + c.height / 2, -it.y])}\nmesh = ${c.procedural.shape === "cylinder" ? `SubResource("cy_${rid(c.id)}")` : boxMesh(c.footprint.width, c.height, c.footprint.depth)}\nmaterial_override = ${m}`);
+      nodes.push(`[node name="${name}" type="MeshInstance3D" parent="Furniture"]\ntransform = ${T(rotY(it.yawDeg, it.scale), [it.x, it.elevation + (c.height * it.scale) / 2, -it.y])}\nmesh = ${c.procedural.shape === "cylinder" ? `SubResource("cy_${rid(c.id)}")` : boxMesh(c.footprint.width, c.height, c.footprint.depth)}\nmaterial_override = ${m}`);
       items++;
       continue;
     }
     const id = addExt("PackedScene", `res://assets/models/${path.basename(c.model)}`);
     const psi = it.yawDeg;
     // origin = pos + R(psi) * (-origin); basis = R(psi + frontYaw) * scale
-    const ox = -c.origin[0], oy = -c.origin[1], oz = -c.origin[2];
+    const ox = -c.origin[0] * it.scale, oy = -c.origin[1] * it.scale, oz = -c.origin[2] * it.scale;
     const cs = Math.cos(rad(psi)), sn = Math.sin(rad(psi));
     const pos: [number, number, number] = [it.x + cs * ox + sn * oz, it.elevation + oy, -it.y - sn * ox + cs * oz];
-    nodes.push(`[node name="${name}" parent="Furniture" instance=ExtResource("${id}")]\ntransform = ${T(rotY(psi + c.frontYawDeg, c.scale), pos)}`);
+    nodes.push(`[node name="${name}" parent="Furniture" instance=ExtResource("${id}")]\ntransform = ${T(rotY(psi + c.frontYawDeg, c.scale * it.scale), pos)}`);
     items++;
   }
 

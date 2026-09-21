@@ -10,9 +10,10 @@ import { bbox } from "../../../shared/geometry";
 const rad = (d: number) => (d * Math.PI) / 180;
 
 /** Matrix that places a catalog item: T(pos) * R(yaw) * T(-origin) * R(frontYaw) * S(scale). */
-function itemMatrix(c: CatalogItem, it: WorldItem): THREE.Matrix4 {
+export function itemMatrix(c: CatalogItem, it: WorldItem): THREE.Matrix4 {
   const m = new THREE.Matrix4().makeTranslation(it.x, it.elevation, -it.y);
   m.multiply(new THREE.Matrix4().makeRotationY(rad(it.yawDeg)));
+  m.multiply(new THREE.Matrix4().makeScale(it.scale, it.scale, it.scale));
   m.multiply(new THREE.Matrix4().makeTranslation(-c.origin[0], -c.origin[1], -c.origin[2]));
   m.multiply(new THREE.Matrix4().makeRotationY(rad(c.frontYawDeg)));
   m.multiply(new THREE.Matrix4().makeScale(c.scale, c.scale, c.scale));
@@ -40,19 +41,37 @@ function useFloorTexture() {
 
 const shapeOf = (pts: [number, number][]) => new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
 
-export default function Scene3D({ scene, catalog, hideCeiling }: { scene: SceneDescription; catalog: Catalog; hideCeiling: boolean }) {
+interface SceneProps {
+  scene: SceneDescription;
+  catalog: Catalog;
+  hideCeiling: boolean;
+  /** Edit mode: furniture becomes pickable and the selected piece is drawn separately. */
+  editing?: boolean;
+  hiddenId?: string | null;
+  /** Live (uncommitted) state of the selected piece, used for its pick box. */
+  draftItem?: WorldItem | null;
+  hoverId?: string | null;
+}
+
+/** Marks an object so the editor's raycaster (layer 1) can hit it. */
+const pickable = (o: THREE.Object3D | null) => o?.layers.enable(1);
+
+export default function Scene3D({ scene, catalog, hideCeiling, editing = false, hiddenId = null, draftItem = null, hoverId = null }: SceneProps) {
   const floorTex = useFloorTexture();
   const box = useMemo(() => bbox(scene.boundary), [scene]);
-  const floorGeo = useMemo(() => new THREE.ShapeGeometry(shapeOf(scene.boundary)), [scene]);
+  const floorGeo = useMemo(() => new THREE.ShapeGeometry(shapeOf(scene.boundary)), [scene.boundary]);
   const ceilGeo = floorGeo;
   const span = Math.max(box.width, box.height);
   const cx = (box.minX + box.maxX) / 2, cz = -(box.minY + box.maxY) / 2;
 
   const byItem = useMemo(() => {
     const m = new Map<string, WorldItem[]>();
-    for (const it of scene.items) (m.get(it.itemId) ?? m.set(it.itemId, []).get(it.itemId)!).push(it);
+    for (const it of scene.items) {
+      if (it.id === hiddenId) continue;
+      (m.get(it.itemId) ?? m.set(it.itemId, []).get(it.itemId)!).push(it);
+    }
     return m;
-  }, [scene]);
+  }, [scene.items, hiddenId]);
   const catById = useMemo(() => new Map(catalog.items.map((i) => [i.id, i])), [catalog]);
 
   // Aim the sun (and its shadow frustum) at the middle of this building, wherever it sits.
@@ -114,7 +133,7 @@ export default function Scene3D({ scene, catalog, hideCeiling }: { scene: SceneD
       {[...scene.walls, ...scene.partitions].map((w) => {
         const glass = w.kind === "glass" || w.kind === "partition-glass";
         return (
-          <mesh key={w.id} position={[w.cx, (w.y0 + w.y1) / 2, -w.cy]} rotation={[0, rad(w.angleDeg), 0]} castShadow={!glass} receiveShadow renderOrder={glass ? 2 : 0}>
+          <mesh key={w.id} ref={glass ? undefined : pickable} position={[w.cx, (w.y0 + w.y1) / 2, -w.cy]} rotation={[0, rad(w.angleDeg), 0]} castShadow={!glass} receiveShadow renderOrder={glass ? 2 : 0}>
             <boxGeometry args={[w.length, w.y1 - w.y0, w.thickness]} />
             {glass ? (
               <meshPhysicalMaterial color="#bfe0f2" transparent opacity={0.28} roughness={0.05} metalness={0} depthWrite={false} />
@@ -137,6 +156,22 @@ export default function Scene3D({ scene, catalog, hideCeiling }: { scene: SceneD
         </mesh>
       )}
 
+      {/* pick boxes for edit mode: invisible, but the editor's raycaster can hit them */}
+      {editing &&
+        scene.items.map((base) => {
+          const it = draftItem && draftItem.id === base.id ? draftItem : base;
+          const c = catById.get(it.itemId);
+          if (!c) return null;
+          const h = c.height * it.scale;
+          return (
+            <mesh key={`pick-${it.id}`} ref={pickable} userData={{ pickId: it.id }} position={[it.x, it.elevation + h / 2, -it.y]} rotation={[0, rad(it.yawDeg), 0]}>
+              <boxGeometry args={[c.footprint.width * it.scale, h, c.footprint.depth * it.scale]} />
+              <meshBasicMaterial colorWrite={false} depthWrite={false} />
+            </mesh>
+          );
+        })}
+      {editing && hoverId && hoverId !== hiddenId && <HoverRing item={scene.items.find((i) => i.id === hoverId) ?? null} catalog={catById} />}
+
       {/* furniture, one instanced draw per model part */}
       {[...byItem.entries()].map(([id, list]) => {
         const c = catById.get(id);
@@ -151,10 +186,21 @@ export default function Scene3D({ scene, catalog, hideCeiling }: { scene: SceneD
   );
 }
 
+function HoverRing({ item, catalog }: { item: WorldItem | null; catalog: Map<string, CatalogItem> }) {
+  const c = item ? catalog.get(item.itemId) : null;
+  if (!item || !c) return null;
+  return (
+    <mesh position={[item.x, 0.03, -item.y]} rotation={[-Math.PI / 2, 0, rad(item.yawDeg)]}>
+      <planeGeometry args={[c.footprint.width * item.scale + 0.12, c.footprint.depth * item.scale + 0.12]} />
+      <meshBasicMaterial color="#0f6b5c" transparent opacity={0.28} depthWrite={false} />
+    </mesh>
+  );
+}
+
 function Obstacle({ polygon, height, column }: { polygon: [number, number][]; height: number; column: boolean }) {
   const geo = useMemo(() => new THREE.ExtrudeGeometry(shapeOf(polygon), { depth: height, bevelEnabled: false }), [polygon, height]);
   return (
-    <mesh geometry={geo} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+    <mesh ref={pickable} geometry={geo} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
       <meshStandardMaterial color={column ? "#c9c5bb" : "#d7d3ca"} roughness={0.9} />
     </mesh>
   );
@@ -194,7 +240,7 @@ function ProceduralItems({ item, list }: { item: CatalogItem; list: WorldItem[] 
   return (
     <>
       {list.map((it) => (
-        <mesh key={it.id} position={[it.x, it.elevation + item.height / 2, -it.y]} rotation={[0, rad(it.yawDeg), 0]} castShadow receiveShadow>
+        <mesh key={it.id} position={[it.x, it.elevation + (item.height * it.scale) / 2, -it.y]} rotation={[0, rad(it.yawDeg), 0]} scale={it.scale} castShadow receiveShadow>
           {proc.shape === "cylinder" ? <cylinderGeometry args={[item.footprint.width / 2, item.footprint.width / 2, item.height, 32]} /> : <boxGeometry args={[item.footprint.width, item.height, item.footprint.depth]} />}
           <meshStandardMaterial color={proc.color} roughness={0.6} />
         </mesh>
@@ -208,7 +254,7 @@ function FallbackBoxes({ item, list }: { item: CatalogItem; list: WorldItem[] })
   return (
     <>
       {list.map((it) => (
-        <mesh key={it.id} position={[it.x, it.elevation + item.height / 2, -it.y]} rotation={[0, rad(it.yawDeg), 0]} castShadow>
+        <mesh key={it.id} position={[it.x, it.elevation + (item.height * it.scale) / 2, -it.y]} rotation={[0, rad(it.yawDeg), 0]} scale={it.scale} castShadow>
           <boxGeometry args={[item.footprint.width, item.height, item.footprint.depth]} />
           <meshStandardMaterial color="#9aa1ad" roughness={0.8} />
         </mesh>

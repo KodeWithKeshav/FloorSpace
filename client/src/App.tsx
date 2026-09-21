@@ -11,7 +11,7 @@ import WalkScreen from "./screens/WalkScreen";
 function readDeepLink() {
   const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const step = h.get("step");
-  return { step: step === "requirements" ? 1 : step === "result" ? 2 : step === "walk" ? 3 : null, tp: h.has("tp") ? Number(h.get("tp")) : undefined, top: h.get("view") === "top" };
+  return { step: step === "requirements" ? 1 : step === "result" ? 2 : step === "walk" ? 3 : null, tp: h.has("tp") ? Number(h.get("tp")) : undefined, top: h.get("view") === "top", mode: h.get("mode") === "edit" ? ("edit" as const) : ("walk" as const) };
 }
 
 export default function App() {
@@ -108,7 +108,7 @@ export default function App() {
       {step === 2 && plan && layout && catalog && <ResultScreen plan={plan} layout={layout} catalog={catalog} projectName={req?.projectName} onBack={() => setStep(1)} onWalk={() => setStep(3)} />}
 
       {step === 3 && plan && layout && catalog && (
-        <WalkScreen plan={plan} layout={layout} catalog={catalog} onBack={() => setStep(2)} initialTeleport={deep.current.tp} initialTop={deep.current.top} />
+        <WalkScreen plan={plan} layout={layout} catalog={catalog} onBack={() => setStep(2)} initialTeleport={deep.current.tp} initialTop={deep.current.top} initialMode={deep.current.mode} onLayoutChange={setLayout} />
       )}
     </div>
   );

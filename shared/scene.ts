@@ -33,6 +33,8 @@ export interface WorldItem {
   elevation: number;
   /** Rotation about the world Y axis (degrees) that turns the item's +Z front to the layout direction. */
   yawDeg: number;
+  /** Size multiplier from the editor (1 by default). */
+  scale: number;
 }
 
 export interface Collider {
@@ -123,11 +125,12 @@ export function buildScene(plan: FloorPlan, layout: Layout, catalog: Catalog): S
   for (const p of layout.placements) {
     const it = byId.get(p.itemId);
     if (!it) continue;
-    items.push({ id: p.id, itemId: p.itemId, x: p.position[0], y: p.position[1], elevation: it.elevation, yawDeg: itemYawDeg(p.rotationDeg) });
-    if (it.elevation === 0 && it.height > 0.3 && it.category !== "chair") {
+    const k = p.scale ?? 1;
+    items.push({ id: p.id, itemId: p.itemId, x: p.position[0], y: p.position[1], elevation: it.elevation, yawDeg: itemYawDeg(p.rotationDeg), scale: k });
+    if (it.elevation === 0 && it.height * k > 0.3 && it.category !== "chair") {
       const t = p.rotationDeg;
       // Footprint width runs along the item's local x, which in plan space is the direction t + 90.
-      colliders.push({ src: "item", cx: p.position[0], cy: p.position[1], hx: it.footprint.width / 2, hy: it.footprint.depth / 2, angleDeg: t + 90 });
+      colliders.push({ src: "item", cx: p.position[0], cy: p.position[1], hx: (it.footprint.width * k) / 2, hy: (it.footprint.depth * k) / 2, angleDeg: t + 90 });
     }
   }
   for (const w of [...walls, ...partitions]) {

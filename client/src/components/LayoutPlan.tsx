@@ -47,7 +47,8 @@ export default function LayoutPlan({ plan, layout, catalog, options, showFurnitu
           const it = items.get(p.itemId);
           if (!it || it.elevation > 0) return null;
           const dim = highlightType && layout.zones.find((z) => z.id === p.zoneId)?.type !== highlightType;
-          const w = it.footprint.width, d = it.footprint.depth;
+          const k = p.scale ?? 1;
+          const w = it.footprint.width * k, d = it.footprint.depth * k;
           // local x axis points along plan angle (theta + 90); SVG's y axis is flipped, so the rotation is negated.
           const rot = -(p.rotationDeg + 90);
           const round = it.category === "chair" || it.procedural?.shape === "cylinder";

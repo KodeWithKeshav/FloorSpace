@@ -38,6 +38,7 @@ export default function ResultScreen({ plan, layout, catalog, projectName, onBac
                 <h1 className="text-[22px] font-semibold tracking-tight text-ink">{projectName || plan.name}</h1>
                 <p className="mt-1 text-[13.5px] text-ink-2">
                   {plan.name} · <span className="tabular-nums">{m.seatsProvided}</span> desk seats · {layout.zones.filter((z) => z.enclosed).length} enclosed {layout.zones.filter((z) => z.enclosed).length === 1 ? "room" : "rooms"}
+                  {layout.edited && <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[11.5px] font-semibold text-brand-600" title="Furniture was moved, resized or added in the 3D editor. Room outlines and areas are as generated.">Edited in 3D</span>}
                   <span className="ml-2 rounded-full bg-canvas px-2 py-0.5 text-[11.5px] font-medium text-ink-2" title="Layouts are produced by the built-in rule-based engine, so they work offline">
                     {layout.mode === "rule-based" ? "Rule-based engine · offline" : layout.mode}
                   </span>

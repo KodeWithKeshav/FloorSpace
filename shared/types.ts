@@ -184,6 +184,8 @@ export interface Placement {
   position: Pt;
   /** Direction the item's front faces in plan space: degrees counter-clockwise from +x. */
   rotationDeg: number;
+  /** Uniform size multiplier set in edit mode (1 = as catalogued). */
+  scale?: number;
 }
 
 export interface Partition {
@@ -248,6 +250,8 @@ export interface Layout {
   corridors: Corridor[];
   metrics: LayoutMetrics;
   report: LayoutReport;
+  /** True once furniture has been moved, resized or changed in the 3D editor. */
+  edited?: boolean;
 }
 
 // ───────────────────────── Feasibility ─────────────────────────

@@ -6,7 +6,8 @@ Floor plan in, furnished layout out, then walk through it in first person, in th
 2. **Requirements**: rooms and seats. A live check tells you if the brief fits *before* anything is generated, and what would fit if it doesn't.
 3. **Layout**: a furnished 2D plan with the area **occupied vs free**, per-zone breakdown, seats and floor-per-seat.
 4. **Walkthrough**: first-person 3D at real scale (eye height 1.65 m, 1.4 m/s) with collision, minimap, room teleport and a bird's-eye view.
-5. **Godot**: one click builds a complete Godot 4 project of the layout, with a first-person player (a VR rig is included but switched off).
+5. **Edit mode**: switch the walkthrough to *Edit* and reorganise the layout from inside it. Click furniture to select, drag to move, `R` or the wheel to rotate, `[` `]` to resize (50–200%), `Ctrl+D` to duplicate, `Del` to remove, `Ctrl+Z` to undo. **Add furniture** drops any catalogue piece in front of you. Pieces that leave the building or overlap walls or other furniture turn red. Edits carry through to the layout screen and to the Godot export.
+6. **Godot**: one click builds a complete Godot 4 project of the layout, with a first-person player (a VR rig is included but switched off).
 
 ## Run
 
