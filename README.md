@@ -63,3 +63,18 @@ In the project press **F5**. Desktop: click, WASD, Shift, `1`-`9`/Tab to jump be
 | `server/` | Express API, pipeline (`pipeline/`), Godot exporter (`godot/`) |
 | `client/` | React + Vite + Tailwind + three.js |
 | `tests/`, `scripts/` | Test suite, catalog builder, walkability check |
+
+## Walk it with your phone
+
+An extra option on the layout screen: **Walk it with your phone → Connect a phone**.
+
+```bash
+npm run dev:phone     # same as npm run dev, plus an HTTPS server on :5174 for phones
+```
+
+Scan the QR code (phone on the same Wi-Fi), accept the browser's certificate warning (Advanced → Proceed; it is your own laptop's throw-away certificate), then:
+
+- **Walk it in AR** (Chrome on Android with Google Play Services for AR): the phone's motion tracking moves you through the office at real size. Walk a clear space; use the on-screen stick for longer distances, **Go to** to jump to a room and **Recentre here** to realign.
+- **Look around with the gyro** (any phone, including iPhone): turn the phone to look, walk with the stick.
+
+**Send latest edits to the phone** republishes the layout after you change it in Edit mode. The phone page lives in `client/src/phone/`; nothing in the existing walkthrough, editor or exports is changed.

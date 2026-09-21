@@ -6,6 +6,7 @@ import { ZONE_META } from "../lib/requirements";
 import LayoutPlan, { ZONE_FILL } from "../components/LayoutPlan";
 import SpaceUsage from "../components/SpaceUsage";
 import GodotPanel from "../components/GodotPanel";
+import PhonePanel from "../components/PhonePanel";
 import type { PreviewOptions } from "../components/PlanPreview";
 
 interface Props {
@@ -126,6 +127,8 @@ export default function ResultScreen({ plan, layout, catalog, projectName, onBac
           </section>
 
           <GodotPanel plan={plan} layout={layout} />
+
+          <PhonePanel plan={plan} layout={layout} />
 
           <button
             onClick={() => download(layout, `${plan.id}-layout.json`)}

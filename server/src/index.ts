@@ -12,6 +12,7 @@ import { humanise } from "./validation/errors";
 import { loadCatalog } from "./catalog";
 import { checkFeasibility, generateCached } from "./pipeline/feasibility";
 import { exportGodotProject } from "./godot/exportProject";
+import { phoneRouter } from "./phone";
 import { findGodot, launchGodot, zipDirectory } from "./godot/launch";
 import type { FloorPlan, Requirements } from "../../shared/types";
 
@@ -93,6 +94,8 @@ app.post("/api/generate", (req, res) => {
   if (!inp) return;
   res.json(generateCached(inp.plan, inp.req, loadCatalog()));
 });
+
+app.use(phoneRouter());
 
 // ── Godot export ───────────────────────────────────────────────────────────────
 
