@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://spaceplanner.local/schemas/floorplan.schema.json",
+  "title": "SpacePlanner floor plan",
+  "description": "Bare-shell floor plan. All coordinates are metres in plan space: origin bottom-left, y increasing up the page.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "units", "floor"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-_]*$", "minLength": 1, "maxLength": 64 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "maxLength": 1000 },
+    "units": { "const": "meters" },
+    "floor": {
+      "type": "object",
+      "required": ["boundary", "ceilingHeight"],
+      "additionalProperties": false,
+      "properties": {
+        "boundary": { "type": "array", "minItems": 3, "maxItems": 500, "items": { "$ref": "#/definitions/point" } },
+        "ceilingHeight": { "type": "number", "minimum": 2.2, "maximum": 8 }
+      }
+    },
+    "obstacles": { "type": "array", "maxItems": 500, "items": { "$ref": "#/definitions/obstacle" } },
+    "openings": { "type": "array", "maxItems": 500, "items": { "$ref": "#/definitions/opening" } },
+    "circulation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mainCorridorWidth": { "type": "number", "minimum": 0.9, "maximum": 4 },
+        "secondaryCorridorWidth": { "type": "number", "minimum": 0.9, "maximum": 3 },
+        "minClearanceToWall": { "type": "number", "minimum": 0, "maximum": 2 }
+      }
+    },
+    "metadata": { "type": "object" }
+  },
+  "definitions": {
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number" }
+    },
+    "obstacle": {
+      "type": "object",
+      "required": ["id", "type", "polygon"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["core", "column", "shaft", "stair"] },
+        "polygon": { "type": "array", "minItems": 3, "maxItems": 200, "items": { "$ref": "#/definitions/point" } },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "label": { "type": "string", "maxLength": 80 }
+      }
+    },
+    "opening": {
+      "type": "object",
+      "required": ["id", "type", "wall", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["door", "window"] },
+        "wall": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/definitions/point" } },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "sillHeight": { "type": "number", "minimum": 0 },
+        "isEntry": { "type": "boolean" }
+      }
+    }
+  }
+}

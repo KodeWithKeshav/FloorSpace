@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.DS_Store
+*.log
+.cache
+exports
+
+# Original Unity asset folder (the models used are copied into public/assets/models)
+/Assets/

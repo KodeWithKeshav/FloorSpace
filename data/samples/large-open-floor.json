@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0",
+  "id": "large-open-floor",
+  "name": "Large Open Floor Plate",
+  "description": "1000 sqm bare-shell floor with a regular column grid and two cores. This is the hero demo: 100 seats plus cabins, meeting rooms and a cafe all fit comfortably.",
+  "units": "meters",
+  "floor": {
+    "boundary": [[0, 0], [40, 0], [40, 25], [0, 25]],
+    "ceilingHeight": 3.6
+  },
+  "obstacles": [
+    {
+      "id": "core-1",
+      "type": "core",
+      "label": "Main lift core & toilets",
+      "polygon": [[17.0, 0], [24.0, 0], [24.0, 5.5], [17.0, 5.5]],
+      "height": 3.6
+    },
+    {
+      "id": "core-2",
+      "type": "core",
+      "label": "Fire stair & services",
+      "polygon": [[0, 20.0], [5.0, 20.0], [5.0, 25], [0, 25]],
+      "height": 3.6
+    },
+    { "id": "col-r1c1", "type": "column", "polygon": [[8, 6.25], [8.6, 6.25], [8.6, 6.85], [8, 6.85]], "height": 3.6 },
+    { "id": "col-r1c2", "type": "column", "polygon": [[16, 6.25], [16.6, 6.25], [16.6, 6.85], [16, 6.85]], "height": 3.6 },
+    { "id": "col-r1c3", "type": "column", "polygon": [[24, 6.25], [24.6, 6.25], [24.6, 6.85], [24, 6.85]], "height": 3.6 },
+    { "id": "col-r1c4", "type": "column", "polygon": [[32, 6.25], [32.6, 6.25], [32.6, 6.85], [32, 6.85]], "height": 3.6 },
+    { "id": "col-r2c1", "type": "column", "polygon": [[8, 12.5], [8.6, 12.5], [8.6, 13.1], [8, 13.1]], "height": 3.6 },
+    { "id": "col-r2c2", "type": "column", "polygon": [[16, 12.5], [16.6, 12.5], [16.6, 13.1], [16, 13.1]], "height": 3.6 },
+    { "id": "col-r2c3", "type": "column", "polygon": [[24, 12.5], [24.6, 12.5], [24.6, 13.1], [24, 13.1]], "height": 3.6 },
+    { "id": "col-r2c4", "type": "column", "polygon": [[32, 12.5], [32.6, 12.5], [32.6, 13.1], [32, 13.1]], "height": 3.6 },
+    { "id": "col-r3c1", "type": "column", "polygon": [[8, 18.75], [8.6, 18.75], [8.6, 19.35], [8, 19.35]], "height": 3.6 },
+    { "id": "col-r3c2", "type": "column", "polygon": [[16, 18.75], [16.6, 18.75], [16.6, 19.35], [16, 19.35]], "height": 3.6 },
+    { "id": "col-r3c3", "type": "column", "polygon": [[24, 18.75], [24.6, 18.75], [24.6, 19.35], [24, 19.35]], "height": 3.6 },
+    { "id": "col-r3c4", "type": "column", "polygon": [[32, 18.75], [32.6, 18.75], [32.6, 19.35], [32, 19.35]], "height": 3.6 }
+  ],
+  "openings": [
+    { "id": "door-main", "type": "door", "wall": [[24.5, 0], [26.5, 0]], "height": 2.4, "isEntry": true },
+    { "id": "door-fire-1", "type": "door", "wall": [[0, 10.0], [0, 11.4]], "height": 2.1, "isEntry": false },
+    { "id": "door-fire-2", "type": "door", "wall": [[38.0, 25], [39.4, 25]], "height": 2.1, "isEntry": false },
+    { "id": "win-s1", "type": "window", "wall": [[2.0, 0], [16.0, 0]], "height": 2.0, "sillHeight": 0.75 },
+    { "id": "win-s2", "type": "window", "wall": [[28.0, 0], [38.0, 0]], "height": 2.0, "sillHeight": 0.75 },
+    { "id": "win-e1", "type": "window", "wall": [[40, 2.0], [40, 23.0]], "height": 2.0, "sillHeight": 0.75 },
+    { "id": "win-n1", "type": "window", "wall": [[6.0, 25], [36.0, 25]], "height": 2.0, "sillHeight": 0.75 },
+    { "id": "win-w1", "type": "window", "wall": [[0, 2.0], [0, 9.0]], "height": 2.0, "sillHeight": 0.75 },
+    { "id": "win-w2", "type": "window", "wall": [[0, 12.5], [0, 19.0]], "height": 2.0, "sillHeight": 0.75 }
+  ],
+  "circulation": {
+    "mainCorridorWidth": 1.8,
+    "secondaryCorridorWidth": 1.4,
+    "minClearanceToWall": 0.7
+  },
+  "metadata": {
+    "floorAreaSqM": 1000,
+    "obstacleAreaSqM": 68.0,
+    "notes": "Column grid is 8m x 6.25m. Daylight on all four sides. Main entry is south, right of the core."
+  }
+}

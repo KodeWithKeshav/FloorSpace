@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0",
+  "description": "Demo requirement sets, one per sample floor plan. Load alongside the matching floorPlanId. The 'tight-floor' entry is expected to FAIL the feasibility pre-check - that is intentional.",
+  "sets": [
+    {
+      "id": "req-small-office",
+      "floorPlanId": "small-office",
+      "projectName": "Startup Studio Fitout",
+      "expectedOutcome": "feasible",
+      "zones": [
+        { "type": "reception", "count": 1, "preference": "entry_adjacent" },
+        { "type": "workstation", "seats": 32, "preferredStyle": "linear_4pack" },
+        { "type": "cabin", "count": 2, "seatsEach": 1, "preference": "window" },
+        { "type": "meeting", "count": 1, "capacityEach": 6, "preference": "core_adjacent" },
+        { "type": "pantry", "count": 1 },
+        { "type": "phonebooth", "count": 2, "preference": "quiet" }
+      ],
+      "constraints": { "minAreaPerSeat": 4.5, "targetUtilization": 0.7, "accessibleRoutes": true }
+    },
+    {
+      "id": "req-l-shaped",
+      "floorPlanId": "l-shaped-floor",
+      "projectName": "Regional HQ",
+      "expectedOutcome": "feasible",
+      "zones": [
+        { "type": "reception", "count": 1, "preference": "entry_adjacent" },
+        { "type": "workstation", "seats": 72, "preferredStyle": "linear_6pack" },
+        { "type": "cabin", "count": 4, "seatsEach": 1, "preference": "window" },
+        { "type": "meeting", "count": 3, "capacityEach": 8, "preference": "core_adjacent" },
+        { "type": "cafeteria", "count": 1, "seats": 24 },
+        { "type": "lounge", "count": 1, "preference": "window" },
+        { "type": "phonebooth", "count": 4, "preference": "quiet" },
+        { "type": "storage", "count": 1, "preference": "none" }
+      ],
+      "constraints": { "minAreaPerSeat": 5.0, "targetUtilization": 0.72, "accessibleRoutes": true }
+    },
+    {
+      "id": "req-large-open",
+      "floorPlanId": "large-open-floor",
+      "projectName": "Acme HQ - 100 Seater",
+      "expectedOutcome": "feasible",
+      "freeTextEquivalent": "100 seater floor with 2 executive cabins, 3 meeting rooms for 8 people each, a cafe for 20, a reception and 4 phone booths",
+      "zones": [
+        { "type": "reception", "count": 1, "preference": "entry_adjacent" },
+        { "type": "workstation", "seats": 100, "preferredStyle": "linear_6pack" },
+        { "type": "cabin", "count": 2, "seatsEach": 1, "preference": "window" },
+        { "type": "meeting", "count": 3, "capacityEach": 8, "preference": "core_adjacent" },
+        { "type": "cafeteria", "count": 1, "seats": 20 },
+        { "type": "phonebooth", "count": 4, "preference": "quiet" },
+        { "type": "storage", "count": 1, "preference": "none" }
+      ],
+      "constraints": { "minAreaPerSeat": 5.5, "targetUtilization": 0.75, "accessibleRoutes": true }
+    },
+    {
+      "id": "req-tight-floor",
+      "floorPlanId": "tight-floor",
+      "projectName": "Over-Ambitious Brief",
+      "expectedOutcome": "infeasible",
+      "expectedResponse": "System should refuse, state the maximum achievable seat count (roughly 28-34), and offer alternatives such as reducing seat count, switching to denser benching, dropping one cabin, or converting the meeting room to a bookable booth.",
+      "zones": [
+        { "type": "reception", "count": 1, "preference": "entry_adjacent" },
+        { "type": "workstation", "seats": 100, "preferredStyle": "linear_6pack" },
+        { "type": "cabin", "count": 2, "seatsEach": 1, "preference": "window" },
+        { "type": "meeting", "count": 2, "capacityEach": 8, "preference": "core_adjacent" },
+        { "type": "cafeteria", "count": 1, "seats": 20 }
+      ],
+      "constraints": { "minAreaPerSeat": 4.5, "targetUtilization": 0.75, "accessibleRoutes": true }
+    }
+  ]
+}

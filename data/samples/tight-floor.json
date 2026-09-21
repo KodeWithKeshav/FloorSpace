@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "tight-floor",
+  "name": "Compact Studio Floor",
+  "description": "A deliberately small floor plate. A 100-seat brief cannot fit here - use it to demonstrate the feasibility pre-check refusing intelligently and offering alternatives.",
+  "units": "meters",
+  "floor": {
+    "boundary": [[0, 0], [16, 0], [16, 10], [0, 10]],
+    "ceilingHeight": 3.0
+  },
+  "obstacles": [
+    {
+      "id": "core-1",
+      "type": "core",
+      "label": "Lift & services",
+      "polygon": [[12.5, 0], [16, 0], [16, 4], [12.5, 4]],
+      "height": 3.0
+    },
+    { "id": "col-1", "type": "column", "polygon": [[5.8, 4.8], [6.2, 4.8], [6.2, 5.2], [5.8, 5.2]], "height": 3.0 },
+    { "id": "col-2", "type": "column", "polygon": [[10.3, 4.8], [10.7, 4.8], [10.7, 5.2], [10.3, 5.2]], "height": 3.0 }
+  ],
+  "openings": [
+    { "id": "door-main", "type": "door", "wall": [[6.0, 0], [7.2, 0]], "height": 2.1, "isEntry": true },
+    { "id": "win-n1", "type": "window", "wall": [[1.5, 10], [7.0, 10]], "height": 1.6, "sillHeight": 0.9 },
+    { "id": "win-n2", "type": "window", "wall": [[9.0, 10], [14.5, 10]], "height": 1.6, "sillHeight": 0.9 },
+    { "id": "win-w1", "type": "window", "wall": [[0, 2.0], [0, 8.0]], "height": 1.6, "sillHeight": 0.9 }
+  ],
+  "circulation": {
+    "mainCorridorWidth": 1.5,
+    "secondaryCorridorWidth": 1.2,
+    "minClearanceToWall": 0.6
+  },
+  "metadata": {
+    "floorAreaSqM": 160,
+    "obstacleAreaSqM": 14.32,
+    "notes": "Realistic capacity is roughly 28-34 seats once circulation, reception and one meeting room are carved out."
+  }
+}
