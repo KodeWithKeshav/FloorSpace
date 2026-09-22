@@ -167,7 +167,7 @@ export default function EditLayer({ scene, catalog, editor, snap, topView, hover
 }
 
 /** The piece being edited: drawn live, with a footprint outline and a facing arrow. */
-function Selected({ placement, item, bad, topView }: { placement: Placement; item: CatalogItem; bad: boolean; topView: boolean }) {
+export function Selected({ placement, item, bad, topView }: { placement: Placement; item: CatalogItem; bad: boolean; topView: boolean }) {
   const w = toWorldItem(placement, item);
   const color = bad ? "#d64545" : "#0f6b5c";
   const corners = placementCorners(placement, item);

@@ -76,6 +76,7 @@ Scan the QR code (phone on the same Wi-Fi), accept the browser's certificate war
 
 - **Walk it in AR** (Chrome on Android with Google Play Services for AR): the phone's motion tracking moves you through the office at real size. Walk a clear space; use the on-screen stick for longer distances, **Go to** to jump to a room and **Recentre here** to realign.
 - **Look around with the gyro** (any phone, including iPhone): turn the phone to look, walk with the stick.
+- **Edit furniture** (both modes): press *Edit furniture*, then use the crosshair in the middle of the screen as the pointer. Aim at a piece and press *Pick up*: it follows where the crosshair meets the floor until you press *Put down*. Rotate, resize, duplicate, delete, add from the catalogue, undo/redo and 10 cm snapping are on the panel. Edits live on the phone for the session and are not sent back to the laptop.
 
 **Send latest edits to the phone** republishes the layout after you change it in Edit mode. The phone page lives in `client/src/phone/`; nothing in the existing walkthrough, editor or exports is changed.
 

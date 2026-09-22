@@ -1,11 +1,17 @@
 import { Canvas } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
-import { AlertTriangle, Camera, Compass, Footprints, Loader2, LogOut, Smartphone, Sparkles } from "lucide-react";
+import { AlertTriangle, Camera, Compass, Footprints, Loader2, LogOut, PencilRuler, Smartphone, Sparkles } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Catalog, FloorPlan, Layout } from "../../../shared/types";
 import { buildScene } from "../../../shared/scene";
 import Scene3D from "../walk/Scene3D";
+import { toWorldItem } from "../walk/EditLayer";
+import { useLayoutEditor } from "../walk/useLayoutEditor";
+import type { PlacementIssue } from "../../../shared/edit";
+import PhoneEditLayer from "./PhoneEditLayer";
+import type { EditBridge } from "./PhoneEditLayer";
+import PhoneEditPanel from "./PhoneEditPanel";
 import Joystick from "./Joystick";
 import PhoneRig from "./PhoneRig";
 import type { PhoneControl, PhoneMode } from "./PhoneRig";
@@ -22,28 +28,8 @@ export default function PhoneApp() {
   const [data, setData] = useState<{ plan: FloorPlan; layout: Layout } | null>(null);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<PhoneMode>("idle");
   const [arSupported, setArSupported] = useState<boolean | null>(null);
   const [arWhy, setArWhy] = useState<string>("");
-  const [passthrough, setPassthrough] = useState(true);
-  const [place, setPlace] = useState(0);
-  const [note, setNote] = useState<string | null>(null);
-  const [gl, setGl] = useState<THREE.WebGLRenderer | null>(null);
-  const overlay = useRef<HTMLDivElement>(null);
-  const session = useRef<XRSessionLike | null>(null);
-
-  const ctl = useRef<PhoneControl>({
-    mode: "idle", joy: { x: 0, y: 0 }, goto: null, passthrough: true, yOffset: 0,
-    orientation: { alpha: 0, beta: 0, gamma: 0, screen: 0, live: false }, dragYaw: 0, dragPitch: 0,
-    readout: { x: 0, y: 0, h: 0, tracking: false },
-  });
-  const [pos, setPos] = useState({ x: 0, y: 0, h: 0, tracking: false });
-  useEffect(() => {
-    const t = setInterval(() => setPos({ ...ctl.current.readout }), 250);
-    return () => clearInterval(t);
-  }, []);
-  const joy = useMemo(() => ({ get current() { return ctl.current.joy; }, set current(v) { ctl.current.joy = v; } }), []);
-
   useEffect(() => {
     (async () => {
       try {
@@ -78,7 +64,80 @@ export default function PhoneApp() {
     }
   }, [code]);
 
-  const scene = useMemo(() => (data && catalog ? buildScene(data.plan, data.layout, catalog) : null), [data, catalog]);
+  if (error) return <Shell><Card><div className="flex items-start gap-3 text-danger"><AlertTriangle size={22} className="mt-0.5 shrink-0" /><div><h1 className="text-[17px] font-semibold">Can't load the office</h1><p className="mt-1 text-[14px] text-ink-2">{error}</p></div></div></Card></Shell>;
+  if (!data || !catalog) return <Shell><Card><div className="flex items-center gap-3 text-ink-2"><Loader2 className="animate-spin" size={20} /> Loading the layout from your laptop…</div></Card></Shell>;
+  return <PhoneStage plan={data.plan} layout={data.layout} catalog={catalog} arSupported={arSupported} arWhy={arWhy} />;
+}
+
+/** The walk-through itself, once the layout is loaded. Edits are kept here, on the phone, for the session. */
+function PhoneStage({ plan, layout, catalog, arSupported, arWhy }: { plan: FloorPlan; layout: Layout; catalog: Catalog; arSupported: boolean | null; arWhy: string }) {
+  const [mode, setMode] = useState<PhoneMode>("idle");
+  const [passthrough, setPassthrough] = useState(true);
+  const [place, setPlace] = useState(0);
+  const [note, setNote] = useState<string | null>(null);
+  const [gl, setGl] = useState<THREE.WebGLRenderer | null>(null);
+  const overlay = useRef<HTMLDivElement>(null);
+  const session = useRef<XRSessionLike | null>(null);
+
+  const ctl = useRef<PhoneControl>({
+    mode: "idle", joy: { x: 0, y: 0 }, goto: null, passthrough: true, yOffset: 0,
+    orientation: { alpha: 0, beta: 0, gamma: 0, screen: 0, live: false }, dragYaw: 0, dragPitch: 0,
+    readout: { x: 0, y: 0, h: 0, tracking: false },
+  });
+  const [pos, setPos] = useState({ x: 0, y: 0, h: 0, tracking: false });
+  useEffect(() => {
+    const t = setInterval(() => setPos({ ...ctl.current.readout }), 250);
+    return () => clearInterval(t);
+  }, []);
+  const joy = useMemo(() => ({ get current() { return ctl.current.joy; }, set current(v) { ctl.current.joy = v; } }), []);
+
+  const editor = useLayoutEditor(layout, catalog);
+  const editedLayout = useMemo<Layout>(() => ({ ...layout, placements: editor.placements, edited: layout.edited || editor.changed }), [layout, editor.placements, editor.changed]);
+  const scene = useMemo(() => buildScene(plan, editedLayout, catalog), [plan, editedLayout, catalog]);
+  const [editing, setEditing] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [issues, setIssues] = useState<PlacementIssue[]>([]);
+  const [snapOn, setSnapOn] = useState(true);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const bridge = useRef<EditBridge>({ floor: null, facing: 0 });
+  const draftItem = useMemo(() => {
+    const d = editor.draft;
+    const c = d ? catalog.items.find((i) => i.id === d.itemId) : null;
+    return d && c ? toWorldItem(d, c) : null;
+  }, [editor.draft, catalog]);
+
+  const toggleEdit = () => {
+    if (editing) {
+      if (holding) editor.commit();
+      editor.select(null);
+      setHolding(false);
+      setHoverId(null);
+      setPaletteOpen(false);
+    }
+    setEditing(!editing);
+  };
+  const grab = () => {
+    if (holding) {
+      editor.commit();
+      setHolding(false);
+      return;
+    }
+    const id = hoverId ?? editor.selectedId;
+    if (!id) return;
+    if (editor.selectedId !== id) editor.select(id);
+    setHolding(true);
+  };
+  // A new piece appears on the floor where the crosshair points (or 2 m ahead), facing you.
+  const addPiece = (itemId: string) => {
+    const b = bridge.current;
+    const fp = b.floor;
+    const yaw = (b.facing * Math.PI) / 180;
+    const x = fp ? fp.x : scene.spawn.x - Math.cos(yaw) * 2;
+    const y = fp ? fp.y : scene.spawn.y - Math.sin(yaw) * 2;
+    editor.add(itemId, x, y, Math.round(b.facing / 15) * 15);
+    setPaletteOpen(false);
+  };
 
   useEffect(() => {
     ctl.current.mode = mode;
@@ -154,9 +213,6 @@ export default function PhoneApp() {
   // Drag to look (gyro mode, and as the desktop fallback).
   const drag = useRef<{ x: number; y: number } | null>(null);
 
-  if (error) return <Shell><Card><div className="flex items-start gap-3 text-danger"><AlertTriangle size={22} className="mt-0.5 shrink-0" /><div><h1 className="text-[17px] font-semibold">Can't load the office</h1><p className="mt-1 text-[14px] text-ink-2">{error}</p></div></div></Card></Shell>;
-  if (!scene || !data || !catalog) return <Shell><Card><div className="flex items-center gap-3 text-ink-2"><Loader2 className="animate-spin" size={20} /> Loading the layout from your laptop…</div></Card></Shell>;
-
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#cfe2f3]" style={{ touchAction: "none" }}>
       <div
@@ -173,7 +229,8 @@ export default function PhoneApp() {
         <Canvas dpr={[1, 1.5]} camera={{ fov: 70, near: 0.05, far: 500, position: [scene.spawn.x, 1.6, -scene.spawn.y] }} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} onCreated={({ gl: r }) => setGl(r)}>
           <PhoneRig scene={scene} ctl={ctl} mode={mode}>
             <Suspense fallback={null}>
-              <Scene3D scene={scene} catalog={catalog} hideCeiling={mode === "ar" && passthrough} />
+              <Scene3D scene={scene} catalog={catalog} hideCeiling={mode === "ar" && passthrough} editing={editing} hiddenId={editing ? editor.selectedId : null} draftItem={editing ? draftItem : null} hoverId={editing ? hoverId : null} />
+              {editing && <PhoneEditLayer scene={scene} catalog={catalog} editor={editor} snap={snapOn ? 0.1 : 0} holding={holding} bridge={bridge} onHover={setHoverId} onIssues={setIssues} />}
             </Suspense>
           </PhoneRig>
         </Canvas>
@@ -200,14 +257,21 @@ export default function PhoneApp() {
             {mode === "ar" && (
               <button onClick={() => setPassthrough((v) => !v)} className="flex items-center gap-1.5 rounded-xl bg-black/55 px-3 py-2 text-[13px] font-medium text-white backdrop-blur"><Camera size={15} /> {passthrough ? "Real sky" : "Virtual sky"}</button>
             )}
+            <button onClick={toggleEdit} aria-pressed={editing} className={"flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-medium backdrop-blur " + (editing ? "bg-white text-black" : "bg-black/55 text-white")}><PencilRuler size={15} /> {editing ? "Done editing" : "Edit furniture"}</button>
             <button onClick={() => goto(place)} className="flex items-center gap-1.5 rounded-xl bg-black/55 px-3 py-2 text-[13px] font-medium text-white backdrop-blur"><Compass size={15} /> Recentre here</button>
           </div>
         </div>
+        {editing && mode !== "idle" && (
+          <>
+            <Crosshair active={Boolean(hoverId) || holding} />
+            <PhoneEditPanel editor={editor} catalog={catalog} hoverId={hoverId} holding={holding} issues={issues} snapOn={snapOn} paletteOpen={paletteOpen} onGrab={grab} onSnap={() => setSnapOn((v) => !v)} onPalette={() => setPaletteOpen((v) => !v)} onAdd={addPiece} />
+          </>
+        )}
       </div>
 
       {mode === "idle" && (
         <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/40 to-transparent p-4 sm:items-center">
-          <Landing plan={data.plan} layout={data.layout} arSupported={arSupported} arWhy={arWhy} note={note} ready={Boolean(gl)} onAR={startAR} onGyro={startGyro} />
+          <Landing plan={plan} layout={layout} arSupported={arSupported} arWhy={arWhy} note={note} ready={Boolean(gl)} onAR={startAR} onGyro={startGyro} />
         </div>
       )}
       <LoadBar />
@@ -240,6 +304,17 @@ function Landing({ plan, layout, arSupported, arWhy, note, ready, onAR, onGyro }
 
       {note && <p className="mt-3 rounded-xl bg-warn-soft px-3 py-2 text-[12.5px] text-warn">{note}</p>}
       <p className="mt-4 border-t border-line-2 pt-3 text-[12px] leading-snug text-muted">Clear the space around you before you start, and keep an eye on your surroundings while you walk.</p>
+    </div>
+  );
+}
+
+/** The pointer for edit mode: whatever it sits on is what you can pick up. */
+function Crosshair({ active }: { active: boolean }) {
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div className={"flex h-9 w-9 items-center justify-center rounded-full border-2 transition " + (active ? "border-[#3ddc97] bg-[#3ddc97]/20" : "border-white/80")}>
+        <div className={"h-1.5 w-1.5 rounded-full " + (active ? "bg-[#3ddc97]" : "bg-white")} />
+      </div>
     </div>
   );
 }

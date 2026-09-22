@@ -35,6 +35,8 @@ export function gemini(): VisionProvider {
             maxOutputTokens: req.maxTokens ?? 8192,
             responseMimeType: "application/json",
             responseSchema: toGeminiSchema(req.schema),
+            // Reading a drawing is perception, not reasoning: thinking tokens only eat the output budget and truncate the JSON.
+            ...(/2\.5/.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
           },
         },
       );
